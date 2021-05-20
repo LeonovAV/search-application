@@ -1,0 +1,281 @@
+package com.anleonov.indexer
+
+import com.anleonov.indexer.api.DocumentIndexer
+import com.anleonov.indexer.api.DocumentIndexerListener
+import com.anleonov.indexer.executor.ExecutorsProvider
+import com.anleonov.indexer.filesystem.FileSystemEventListener
+import com.anleonov.indexer.filesystem.FileSystemTracker
+import com.anleonov.indexer.model.Document
+import com.anleonov.indexer.model.FileSystemEventType
+import com.anleonov.indexer.model.FileSystemEventType.*
+import com.anleonov.indexer.model.IndexingEvent
+import com.anleonov.indexer.task.*
+import com.anleonov.indexer.util.DocumentIdGenerator
+import com.anleonov.indexer.util.supportedFileExtensions
+import org.slf4j.LoggerFactory
+import java.io.IOException
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ *
+ */
+class DocumentIndexerManager(
+    private val fileSystemTracker: FileSystemTracker
+) : DocumentIndexer, FileSystemEventListener {
+
+    private val logger = LoggerFactory.getLogger(DocumentIndexerManager::class.java)
+
+    private val listeners = CopyOnWriteArrayList<DocumentIndexerListener>()
+
+    // thread pool for reading files and producing events for indexing
+    private val indexingExecutorService = ExecutorsProvider.executorService
+
+    // thread pool for consuming indexing events
+    private val indexingScheduledExecutorService = ExecutorsProvider.scheduledExecutorService
+
+    private val queueCapacity = 100_000
+    private val indexingEventsQueue = ArrayBlockingQueue<IndexingEvent>(queueCapacity)
+
+    // status of current indexing process
+    @Volatile
+    private var isCurrentIndexingCancelled = false
+    private var currentIndexingTasks = mutableListOf<Future<*>>()
+
+    // all documents, which are already indexed
+    private val indexedDocuments = ConcurrentHashMap<Path, Document>()
+
+    init {
+        val indexingScheduledTask = DocumentIndexingWithProgressTask(indexingEventsQueue, listeners)
+        indexingScheduledExecutorService.scheduleWithFixedDelay(indexingScheduledTask, 0, 1, TimeUnit.SECONDS)
+
+        fileSystemTracker.addListener(this)
+    }
+
+    override fun indexFolder(path: String) {
+        if (path.isEmpty()) {
+            throw IllegalArgumentException("Path for indexing must not be empty")
+        }
+        val normalizedPath = Paths.get(path).normalize()
+
+        if (hasAccess(normalizedPath)) {
+            logger.info("Try to index folder $normalizedPath")
+
+            val filesCountForIndexing = getFilesCount(normalizedPath)
+            logger.info("Files count for indexing $filesCountForIndexing")
+
+            val percentage = filesCountForIndexing / 100.0
+            val documentCounter = AtomicInteger(0)
+
+            // re-initialize current indexing state
+            isCurrentIndexingCancelled = false
+            currentIndexingTasks = mutableListOf()
+
+            Files.walkFileTree(normalizedPath, object : SimpleFileVisitor<Path>() {
+
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    indexFileWithProgress(file, documentCounter, percentage)
+                    return getFileVisitResult()
+                }
+
+                @Throws(IOException::class)
+                override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
+                    logger.debug("Pre visit directory $path")
+                    return if (Files.isHidden(path)) {
+                        FileVisitResult.SKIP_SUBTREE
+                    } else {
+                        fileSystemTracker.registerFolder(path)
+                        FileVisitResult.CONTINUE
+                    }
+                }
+
+                private fun getFileVisitResult(): FileVisitResult {
+                    return if (isCurrentIndexingCancelled) {
+                        logger.debug("Terminate indexing due to cancelling")
+                        FileVisitResult.TERMINATE
+                    } else FileVisitResult.CONTINUE
+                }
+
+            })
+        } else {
+            logger.warn("No read access to folder $normalizedPath")
+            listeners.forEach { it.onIndexingFinished() }
+        }
+    }
+
+    override fun cancelIndexingFolder() {
+        logger.info("Cancel indexing folder")
+
+        isCurrentIndexingCancelled = true
+
+        currentIndexingTasks.forEach {
+            if (!it.isDone) {
+                it.cancel(true)
+            }
+        }
+
+        indexingEventsQueue.clear()
+
+        DocumentIdGenerator.reset()
+    }
+
+    override fun addIndexerListener(listener: DocumentIndexerListener) {
+        listeners.add(listener)
+    }
+
+    override fun removeIndexerListener(listener: DocumentIndexerListener) {
+        listeners.remove(listener)
+    }
+
+    override fun onFolderChanged(folderPath: Path, type: FileSystemEventType) {
+        logger.debug("Handle event type $type for folder: $folderPath")
+        when (type) {
+            CREATED -> {
+                indexCreatedFolder(folderPath)
+            }
+            DELETED -> {
+                fileSystemTracker.unregisterFolder(folderPath)
+                val documentsToBeDeleted = indexedDocuments.filter { (path, _) -> path.startsWith(folderPath) }.values
+                documentsToBeDeleted.forEach { document ->
+                    removeDocumentFromIndex(document)
+                    fileSystemTracker.unregisterFolder(document.parentPath)
+                }
+            }
+            MODIFIED -> {
+                logger.debug("Processing of folder modified event is skipped")
+            }
+        }
+    }
+
+    override fun onFileChanged(filePath: Path, type: FileSystemEventType) {
+        logger.debug("Handle event type $type for file $filePath")
+        when (type) {
+            CREATED -> {
+                indexFile(filePath)
+            }
+            DELETED -> {
+                indexedDocuments[filePath]?.let {
+                    removeDocumentFromIndex(it)
+                }
+            }
+            MODIFIED -> {
+                if (isFileIndexed(filePath)) {
+                    reindexFile(filePath)
+                }
+            }
+        }
+    }
+
+    private fun indexCreatedFolder(folderPath: Path) {
+        if (hasAccess(folderPath)) {
+            logger.debug("Index new created folder $folderPath")
+
+            Files.walkFileTree(folderPath, object : SimpleFileVisitor<Path>() {
+
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    indexFile(file)
+                    return FileVisitResult.CONTINUE
+                }
+
+                @Throws(IOException::class)
+                override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
+                    return if (Files.isHidden(path)) {
+                        FileVisitResult.SKIP_SUBTREE
+                    } else {
+                        fileSystemTracker.registerFolder(path)
+                        FileVisitResult.CONTINUE
+                    }
+                }
+
+            })
+        }
+    }
+
+    private fun indexFileWithProgress(filePath: Path, documentCounter: AtomicInteger, percentage: Double) {
+        if (hasAccess(filePath) && isFileAvailable(filePath) && !isFileIndexed(filePath)) {
+            val document = Document(DocumentIdGenerator.generate(), filePath, filePath.parent)
+            val documentNumber = documentCounter.incrementAndGet()
+            val task = ReadDocumentWithProgressTask(
+                document,
+                documentNumber,
+                percentage,
+                indexedDocuments,
+                fileSystemTracker,
+                indexingEventsQueue,
+                listeners
+            )
+            val submittedTask = indexingExecutorService.submit(task)
+            currentIndexingTasks.add(submittedTask)
+        }
+    }
+
+    private fun indexFile(filePath: Path) {
+        if (hasAccess(filePath) && isFileAvailable(filePath) && !isFileIndexed(filePath)) {
+            logger.debug("Index new created file $filePath")
+            val document = Document(DocumentIdGenerator.generate(), filePath, filePath.parent)
+            val task = ReadDocumentTask(
+                document,
+                indexedDocuments,
+                fileSystemTracker,
+                indexingEventsQueue
+            )
+            val submittedTask = indexingExecutorService.submit(task)
+            currentIndexingTasks.add(submittedTask)
+        }
+    }
+
+    private fun removeDocumentFromIndex(document: Document) {
+        logger.debug("Remove file ${document.path} from index")
+        val task = RemoveDocumentTask(
+            document,
+            indexedDocuments,
+            fileSystemTracker,
+            indexingEventsQueue
+        )
+        indexingExecutorService.execute(task)
+    }
+
+    private fun reindexFile(filePath: Path) {
+        if (hasAccess(filePath) && isFileAvailable(filePath)) {
+            logger.debug("Re-index file $filePath due to modification")
+
+            indexedDocuments[filePath]?.let {
+                val task = UpdateDocumentTask(it, indexingEventsQueue)
+                indexingExecutorService.submit(task)
+            }
+        }
+    }
+
+    private fun hasAccess(path: Path): Boolean {
+        return Files.exists(path) && Files.isReadable(path)
+    }
+
+    private fun getFilesCount(path: Path): Long {
+        var count: Long = 0
+        Files.newDirectoryStream(path).use { directoryStream ->
+            directoryStream.forEach {
+                if (isFolderAvailable(it)) {
+                    count += getFilesCount(it)
+                } else if (isFileAvailable(it)) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    private fun isFileIndexed(filePath: Path): Boolean {
+        return indexedDocuments.containsKey(filePath)
+    }
+
+    private fun isFolderAvailable(path: Path): Boolean {
+        return Files.isDirectory(path) && !Files.isHidden(path) && Files.isReadable(path)
+    }
+
+    private fun isFileAvailable(path: Path): Boolean {
+        return Files.isRegularFile(path) && Files.isReadable(path) && path.toFile().extension.toLowerCase() in supportedFileExtensions
+    }
+
+}
