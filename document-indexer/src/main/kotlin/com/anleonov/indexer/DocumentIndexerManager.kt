@@ -1,5 +1,7 @@
 package com.anleonov.indexer
 
+import com.anleonov.index.api.DocumentIndex
+import com.anleonov.index.api.Tokenizer
 import com.anleonov.indexer.api.DocumentIndexer
 import com.anleonov.indexer.api.DocumentIndexerListener
 import com.anleonov.indexer.executor.ExecutorsProvider
@@ -23,6 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  */
 class DocumentIndexerManager(
+    private val tokenizer: Tokenizer,
+    private val documentIndex: DocumentIndex,
     private val fileSystemTracker: FileSystemTracker
 ) : DocumentIndexer, FileSystemEventListener {
 
@@ -48,8 +52,8 @@ class DocumentIndexerManager(
     private val indexedDocuments = ConcurrentHashMap<Path, Document>()
 
     init {
-        val indexingScheduledTask = DocumentIndexingWithProgressTask(indexingEventsQueue, listeners)
-        indexingScheduledExecutorService.scheduleWithFixedDelay(indexingScheduledTask, 0, 1, TimeUnit.SECONDS)
+        val indexingJob = DocumentIndexingJob(tokenizer, documentIndex, indexingEventsQueue, listeners)
+        indexingScheduledExecutorService.scheduleWithFixedDelay(indexingJob, 0, 1, TimeUnit.SECONDS)
 
         fileSystemTracker.addListener(this)
     }
@@ -230,6 +234,7 @@ class DocumentIndexerManager(
         logger.debug("Remove file ${document.path} from index")
         val task = RemoveDocumentTask(
             document,
+            documentIndex,
             indexedDocuments,
             fileSystemTracker,
             indexingEventsQueue
@@ -242,7 +247,7 @@ class DocumentIndexerManager(
             logger.debug("Re-index file $filePath due to modification")
 
             indexedDocuments[filePath]?.let {
-                val task = UpdateDocumentTask(it, indexingEventsQueue)
+                val task = UpdateDocumentTask(it, tokenizer, documentIndex, indexingEventsQueue)
                 indexingExecutorService.submit(task)
             }
         }

@@ -1,5 +1,6 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.api.DocumentIndex
 import com.anleonov.indexer.filesystem.FileSystemTracker
 import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.IndexingEvent
@@ -10,6 +11,7 @@ import java.util.concurrent.BlockingQueue
 
 class RemoveDocumentTask(
     private val document: Document,
+    private val documentIndex: DocumentIndex,
     private val indexedDocuments: MutableMap<Path, Document>,
     private val fileSystemTracker: FileSystemTracker,
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
@@ -22,8 +24,8 @@ class RemoveDocumentTask(
         val documentId = document.id
         val documentPath = document.path
 
-        val documentTokens = mutableSetOf<String>()
-        documentTokens.forEach {
+        val documentTokensToRemove = documentIndex.findTokensByDocumentId(documentId)
+        documentTokensToRemove.forEach {
             try {
                 indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
             } catch (ex: InterruptedException) {

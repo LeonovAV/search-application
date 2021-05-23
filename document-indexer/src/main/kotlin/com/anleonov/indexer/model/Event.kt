@@ -10,6 +10,16 @@ class AddLineIndexingEvent(
     line: String
 ) : IndexingEvent(documentId, line)
 
+class AddTokenIndexingEvent(
+    documentId: Int,
+    token: String
+) : IndexingEvent(documentId, token)
+
+class UpdateTokenIndexingEvent(
+    documentId: Int,
+    token: String
+) : IndexingEvent(documentId, token)
+
 class RemoveTokenIndexingEvent(
     documentId: Int,
     token: String
