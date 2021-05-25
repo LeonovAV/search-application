@@ -8,6 +8,8 @@ interface DocumentIndex {
 
     fun update(token: String, documentId: Int)
 
+    fun getDocumentIds(token: String): Set<Int>?
+
     fun findTokensByDocumentId(documentId: Int): Set<String>
 
 }
