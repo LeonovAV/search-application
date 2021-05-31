@@ -1,9 +1,9 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.Document
 import com.anleonov.indexer.filesystem.FileSystemTracker
-import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.IndexingEvent
-import java.nio.file.Path
 import java.util.concurrent.BlockingQueue
 
 /**
@@ -11,10 +11,10 @@ import java.util.concurrent.BlockingQueue
  */
 class ReadDocumentTask(
     document: Document,
-    indexedDocuments: MutableMap<Path, Document>,
+    documentStore: DocumentStore,
     fileSystemTracker: FileSystemTracker,
     indexingEventsQueue: BlockingQueue<IndexingEvent>
-) : AbstractReadDocumentTask(document, indexedDocuments, fileSystemTracker, indexingEventsQueue), Runnable {
+) : AbstractReadDocumentTask(document, documentStore, fileSystemTracker, indexingEventsQueue), Runnable {
 
     override fun run() {
         super.readDocument()

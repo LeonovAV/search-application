@@ -1,5 +1,7 @@
 package com.anleonov.indexer
 
+import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.Document
 import com.anleonov.index.api.DocumentIndex
 import com.anleonov.index.api.Tokenizer
 import com.anleonov.indexer.api.DocumentIndexer
@@ -7,7 +9,6 @@ import com.anleonov.indexer.api.DocumentIndexerListener
 import com.anleonov.indexer.executor.ExecutorsProvider
 import com.anleonov.indexer.filesystem.FileSystemEventListener
 import com.anleonov.indexer.filesystem.FileSystemTracker
-import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.FileSystemEventType
 import com.anleonov.indexer.model.FileSystemEventType.*
 import com.anleonov.indexer.model.IndexingEvent
@@ -18,7 +19,10 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.concurrent.*
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -27,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class DocumentIndexerManager(
     private val tokenizer: Tokenizer,
     private val documentIndex: DocumentIndex,
+    private val documentStore: DocumentStore,
     private val fileSystemTracker: FileSystemTracker
 ) : DocumentIndexer, FileSystemEventListener {
 
@@ -47,9 +52,6 @@ class DocumentIndexerManager(
     @Volatile
     private var isCurrentIndexingCancelled = false
     private var currentIndexingTasks = mutableListOf<Future<*>>()
-
-    // all documents, which are already indexed
-    private val indexedDocuments = ConcurrentHashMap<Path, Document>()
 
     init {
         val indexingJob = DocumentIndexingJob(tokenizer, documentIndex, indexingEventsQueue, listeners)
@@ -122,6 +124,11 @@ class DocumentIndexerManager(
 
         indexingEventsQueue.clear()
 
+        documentIndex.clear()
+        documentStore.clear()
+
+        fileSystemTracker.clear()
+
         DocumentIdGenerator.reset()
     }
 
@@ -141,7 +148,7 @@ class DocumentIndexerManager(
             }
             DELETED -> {
                 fileSystemTracker.unregisterFolder(folderPath)
-                val documentsToBeDeleted = indexedDocuments.filter { (path, _) -> path.startsWith(folderPath) }.values
+                val documentsToBeDeleted = documentStore.findDocumentsStartsWith(folderPath)
                 documentsToBeDeleted.forEach { document ->
                     removeDocumentFromIndex(document)
                     fileSystemTracker.unregisterFolder(document.parentPath)
@@ -160,7 +167,7 @@ class DocumentIndexerManager(
                 indexFile(filePath)
             }
             DELETED -> {
-                indexedDocuments[filePath]?.let {
+                documentStore.getDocumentByPath(filePath)?.let {
                     removeDocumentFromIndex(it)
                 }
             }
@@ -205,7 +212,7 @@ class DocumentIndexerManager(
                 document,
                 documentNumber,
                 percentage,
-                indexedDocuments,
+                documentStore,
                 fileSystemTracker,
                 indexingEventsQueue,
                 listeners
@@ -221,7 +228,7 @@ class DocumentIndexerManager(
             val document = Document(DocumentIdGenerator.generate(), filePath, filePath.parent)
             val task = ReadDocumentTask(
                 document,
-                indexedDocuments,
+                documentStore,
                 fileSystemTracker,
                 indexingEventsQueue
             )
@@ -235,7 +242,7 @@ class DocumentIndexerManager(
         val task = RemoveDocumentTask(
             document,
             documentIndex,
-            indexedDocuments,
+            documentStore,
             fileSystemTracker,
             indexingEventsQueue
         )
@@ -246,7 +253,7 @@ class DocumentIndexerManager(
         if (hasAccess(filePath) && isFileAvailable(filePath)) {
             logger.debug("Re-index file $filePath due to modification")
 
-            indexedDocuments[filePath]?.let {
+            documentStore.getDocumentByPath(filePath)?.let {
                 val task = UpdateDocumentTask(it, tokenizer, documentIndex, indexingEventsQueue)
                 indexingExecutorService.submit(task)
             }
@@ -272,7 +279,7 @@ class DocumentIndexerManager(
     }
 
     private fun isFileIndexed(filePath: Path): Boolean {
-        return indexedDocuments.containsKey(filePath)
+        return documentStore.containsDocument(filePath)
     }
 
     private fun isFolderAvailable(path: Path): Boolean {

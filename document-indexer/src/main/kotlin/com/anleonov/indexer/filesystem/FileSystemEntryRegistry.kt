@@ -82,4 +82,11 @@ class FileSystemEntryRegistry(
         return trackedFiles.toList()
     }
 
+    fun clear() {
+        trackedFiles.clear()
+        trackedFolders.clear()
+        registeredFolders.forEach { (_, value) -> value.cancel() }
+        registeredFolders.clear()
+    }
+
 }

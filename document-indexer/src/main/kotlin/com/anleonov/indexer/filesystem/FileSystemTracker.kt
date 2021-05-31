@@ -61,6 +61,10 @@ class FileSystemTracker(
         listeners.remove(listener)
     }
 
+    fun clear() {
+        fileSystemEntryRegistry.clear()
+    }
+
     override fun onFolderChanged(folderPath: Path, type: FileSystemEventType) {
         when (type) {
             CREATED -> {

@@ -1,18 +1,18 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.Document
 import com.anleonov.index.api.DocumentIndex
 import com.anleonov.indexer.filesystem.FileSystemTracker
-import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.IndexingEvent
 import com.anleonov.indexer.model.RemoveTokenIndexingEvent
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
 import java.util.concurrent.BlockingQueue
 
 class RemoveDocumentTask(
     private val document: Document,
     private val documentIndex: DocumentIndex,
-    private val indexedDocuments: MutableMap<Path, Document>,
+    private val documentStore: DocumentStore,
     private val fileSystemTracker: FileSystemTracker,
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
 ) : Runnable {
@@ -33,7 +33,7 @@ class RemoveDocumentTask(
             }
         }
 
-        indexedDocuments.remove(documentPath)
+        documentStore.removeDocument(documentPath)
 
         fileSystemTracker.unregisterFile(documentPath)
 

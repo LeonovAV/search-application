@@ -11,7 +11,7 @@ class JSearchResultTable(
 ) : JTable(tableModel) {
 
     init {
-        setAutoResizeMode(AUTO_RESIZE_OFF)
+        setAutoResizeMode(AUTO_RESIZE_ALL_COLUMNS)
     }
 
     override fun prepareRenderer(renderer: TableCellRenderer, row: Int, column: Int): Component {

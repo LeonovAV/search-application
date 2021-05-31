@@ -1,17 +1,19 @@
 package com.anleonov.app
 
 import com.anleonov.app.component.JSearchResultTable
-import com.anleonov.app.listener.SearchActionListener
 import com.anleonov.app.model.SearchResultTableModel
 import com.anleonov.app.worker.IndexingWorker
+import com.anleonov.app.worker.SearchWorker
 import com.anleonov.indexer.api.DocumentIndexer
+import com.anleonov.searcher.api.DocumentSearcher
 import org.slf4j.LoggerFactory
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.*
 
 class SearchApplicationFrame(
-    private val documentIndexer: DocumentIndexer
+    private val documentIndexer: DocumentIndexer,
+    private val documentSearcher: DocumentSearcher
 ) : JFrame() {
 
     private val logger = LoggerFactory.getLogger(SearchApplicationFrame::class.java)
@@ -24,6 +26,9 @@ class SearchApplicationFrame(
     private lateinit var progressBarIndexingPanel: JPanel
     private lateinit var progressIndexingLabel: JLabel
     private lateinit var progressIndexingBar: JProgressBar
+
+    // UI components for search result
+    private lateinit var searchResultTable: JSearchResultTable
 
     // Workers
     private lateinit var indexingWorker: IndexingWorker
@@ -56,6 +61,17 @@ class SearchApplicationFrame(
             if (folderChooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
                 val selectedPath = folderChooser.selectedFile.path
                 logger.info("Selected folder path for indexing $selectedPath")
+
+                // clear all data from previous indexing
+                documentIndexer.cancelIndexingFolder()
+                if (this::indexingWorker.isInitialized) {
+                    documentIndexer.removeIndexerListener(indexingWorker)
+                }
+
+                // clear all data from search on UI
+                searchResultTable.selectionModel.clearSelection()
+                searchResultTable.model.resetResultRows()
+
                 indexingWorker = IndexingWorker(
                     progressBarIndexingPanel = progressBarIndexingPanel,
                     progressIndexingBar = progressIndexingBar,
@@ -110,7 +126,8 @@ class SearchApplicationFrame(
         mainPanel.add(createSearchPanel(), BorderLayout.PAGE_START)
 
         val tableModel = SearchResultTableModel()
-        val searchResultTable = JSearchResultTable(tableModel)
+
+        searchResultTable = JSearchResultTable(tableModel)
         searchResultTable.fillsViewportHeight = true
         searchResultTable.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
 
@@ -134,12 +151,18 @@ class SearchApplicationFrame(
     private fun createSearchPanel(): JPanel {
         val searchPanel = JPanel(BorderLayout())
 
-        val searchButton = JButton("Search")
-        searchButton.addActionListener(SearchActionListener())
-        searchPanel.add(searchButton, BorderLayout.EAST)
-
         val searchField = JTextField()
         searchPanel.add(searchField, BorderLayout.CENTER)
+
+        val searchButton = JButton("Search")
+        searchButton.addActionListener {
+            val searchQuery = searchField.text
+            if (searchQuery.isNotEmpty()) {
+                val searchWorker = SearchWorker(searchQuery, documentSearcher, searchResultTable)
+                searchWorker.execute()
+            }
+        }
+        searchPanel.add(searchButton, BorderLayout.EAST)
 
         return searchPanel
     }

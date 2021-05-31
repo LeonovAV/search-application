@@ -1,13 +1,13 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.Document
 import com.anleonov.indexer.filesystem.FileSystemTracker
 import com.anleonov.indexer.model.AddLineIndexingEvent
-import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.IndexingEvent
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.BlockingQueue
 
 /**
@@ -15,7 +15,7 @@ import java.util.concurrent.BlockingQueue
  */
 abstract class AbstractReadDocumentTask(
     private val document: Document,
-    private val indexedDocuments: MutableMap<Path, Document>,
+    private val documentStore: DocumentStore,
     private val fileSystemTracker: FileSystemTracker,
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
 ) {
@@ -27,6 +27,11 @@ abstract class AbstractReadDocumentTask(
         val documentId = document.id
         val documentPath = document.path
         logger.debug("Read file $documentPath for indexing")
+
+        fileSystemTracker.registerFile(documentPath)
+
+        documentStore.addDocument(document)
+
         try {
             Files.lines(documentPath).use { lines ->
                 lines.forEach { line: String ->
@@ -42,10 +47,6 @@ abstract class AbstractReadDocumentTask(
         }
         val end = System.currentTimeMillis()
         logger.debug("File $documentPath reading and submitting took: ${end - start} ms")
-
-        fileSystemTracker.registerFile(documentPath)
-
-        indexedDocuments[documentPath] = document
     }
 
 }

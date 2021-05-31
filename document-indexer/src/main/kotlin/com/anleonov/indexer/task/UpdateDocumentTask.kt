@@ -1,8 +1,12 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.api.Document
 import com.anleonov.index.api.DocumentIndex
 import com.anleonov.index.api.Tokenizer
-import com.anleonov.indexer.model.*
+import com.anleonov.indexer.model.AddTokenIndexingEvent
+import com.anleonov.indexer.model.IndexingEvent
+import com.anleonov.indexer.model.RemoveTokenIndexingEvent
+import com.anleonov.indexer.model.UpdateTokenIndexingEvent
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.util.concurrent.BlockingQueue

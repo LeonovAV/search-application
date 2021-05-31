@@ -1,8 +1,9 @@
 package com.anleonov.indexer.task
 
+import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.Document
 import com.anleonov.indexer.api.DocumentIndexerListener
 import com.anleonov.indexer.filesystem.FileSystemTracker
-import com.anleonov.indexer.model.Document
 import com.anleonov.indexer.model.IndexingEvent
 import java.nio.file.Path
 import java.util.concurrent.BlockingQueue
@@ -14,11 +15,11 @@ class ReadDocumentWithProgressTask(
     document: Document,
     private val documentNumber: Int,
     private val percentage: Double,
-    indexedDocuments: MutableMap<Path, Document>,
+    documentStore: DocumentStore,
     fileSystemTracker: FileSystemTracker,
     indexingEventsQueue: BlockingQueue<IndexingEvent>,
     private val listeners: List<DocumentIndexerListener>
-) : AbstractReadDocumentTask(document, indexedDocuments, fileSystemTracker, indexingEventsQueue), Runnable {
+) : AbstractReadDocumentTask(document, documentStore, fileSystemTracker, indexingEventsQueue), Runnable {
 
     override fun run() {
         super.readDocument()
