@@ -1,7 +1,7 @@
 package com.anleonov.app
 
 import com.anleonov.index.DocumentIndexStore
-import com.anleonov.index.DocumentStore
+import com.anleonov.index.DocumentStoreImpl
 import com.anleonov.index.api.CommonNGramSize.triGram
 import com.anleonov.index.tokenizer.NGramTokenizer
 import com.anleonov.indexer.DocumentIndexerManager
@@ -17,7 +17,7 @@ fun main() {
 
     val tokenizer = NGramTokenizer(triGram)
     val documentIndex = DocumentIndexStore()
-    val documentStore = DocumentStore()
+    val documentStore = DocumentStoreImpl()
 
     val documentIndexer = DocumentIndexerManager(tokenizer, documentIndex, documentStore, fileSystemTracker)
     val documentSearcher = DocumentSearcherManager(tokenizer, documentIndex, documentStore)

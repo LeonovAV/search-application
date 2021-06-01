@@ -1,7 +1,7 @@
 package com.anleonov.indexer.task
 
-import com.anleonov.index.DocumentStore
 import com.anleonov.index.api.Document
+import com.anleonov.index.api.DocumentStore
 import com.anleonov.indexer.filesystem.FileSystemTracker
 import com.anleonov.indexer.model.AddLineIndexingEvent
 import com.anleonov.indexer.model.IndexingEvent

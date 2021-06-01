@@ -1,11 +1,7 @@
 package com.anleonov.searcher
 
-import com.anleonov.index.DocumentStore
+import com.anleonov.index.api.*
 import com.anleonov.index.api.CommonNGramSize.triGram
-import com.anleonov.index.api.Document
-import com.anleonov.index.api.DocumentIndex
-import com.anleonov.index.api.DocumentIndexTrackChangesListener
-import com.anleonov.index.api.Tokenizer
 import com.anleonov.searcher.api.*
 import com.anleonov.searcher.util.*
 import kotlinx.coroutines.flow.MutableSharedFlow

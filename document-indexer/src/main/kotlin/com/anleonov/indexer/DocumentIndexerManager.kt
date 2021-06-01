@@ -1,8 +1,8 @@
 package com.anleonov.indexer
 
-import com.anleonov.index.DocumentStore
 import com.anleonov.index.api.Document
 import com.anleonov.index.api.DocumentIndex
+import com.anleonov.index.api.DocumentStore
 import com.anleonov.index.api.Tokenizer
 import com.anleonov.indexer.api.DocumentIndexer
 import com.anleonov.indexer.api.DocumentIndexerListener
