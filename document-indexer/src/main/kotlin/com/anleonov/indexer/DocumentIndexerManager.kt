@@ -79,32 +79,35 @@ class DocumentIndexerManager(
             isCurrentIndexingCancelled = false
             currentIndexingTasks = mutableListOf()
 
-            Files.walkFileTree(normalizedPath, object : SimpleFileVisitor<Path>() {
+            try {
+                Files.walkFileTree(normalizedPath, object : SimpleFileVisitor<Path>() {
 
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    indexFileWithProgress(file, documentCounter, percentage)
-                    return getFileVisitResult()
-                }
-
-                @Throws(IOException::class)
-                override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
-                    logger.debug("Pre visit directory $path")
-                    return if (Files.isHidden(path)) {
-                        FileVisitResult.SKIP_SUBTREE
-                    } else {
-                        fileSystemTracker.registerFolder(path)
-                        FileVisitResult.CONTINUE
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        indexFileWithProgress(file, documentCounter, percentage)
+                        return getFileVisitResult()
                     }
-                }
 
-                private fun getFileVisitResult(): FileVisitResult {
-                    return if (isCurrentIndexingCancelled) {
-                        logger.debug("Terminate indexing due to cancelling")
-                        FileVisitResult.TERMINATE
-                    } else FileVisitResult.CONTINUE
-                }
+                    override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
+                        logger.debug("Pre visit directory $path")
+                        return if (Files.isHidden(path)) {
+                            FileVisitResult.SKIP_SUBTREE
+                        } else {
+                            fileSystemTracker.registerFolder(path)
+                            FileVisitResult.CONTINUE
+                        }
+                    }
 
-            })
+                    private fun getFileVisitResult(): FileVisitResult {
+                        return if (isCurrentIndexingCancelled) {
+                            logger.debug("Terminate indexing due to cancelling")
+                            FileVisitResult.TERMINATE
+                        } else FileVisitResult.CONTINUE
+                    }
+
+                })
+            } catch (e: IOException) {
+                logger.warn("Indexing failed", e)
+            }
         } else {
             logger.warn("No read access to folder $normalizedPath")
             listeners.forEach { it.onIndexingFinished() }
@@ -183,24 +186,27 @@ class DocumentIndexerManager(
         if (hasAccess(folderPath)) {
             logger.debug("Index new created folder $folderPath")
 
-            Files.walkFileTree(folderPath, object : SimpleFileVisitor<Path>() {
+            try {
+                Files.walkFileTree(folderPath, object : SimpleFileVisitor<Path>() {
 
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    indexFile(file)
-                    return FileVisitResult.CONTINUE
-                }
-
-                @Throws(IOException::class)
-                override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
-                    return if (Files.isHidden(path)) {
-                        FileVisitResult.SKIP_SUBTREE
-                    } else {
-                        fileSystemTracker.registerFolder(path)
-                        FileVisitResult.CONTINUE
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        indexFile(file)
+                        return FileVisitResult.CONTINUE
                     }
-                }
 
-            })
+                    override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
+                        return if (Files.isHidden(path)) {
+                            FileVisitResult.SKIP_SUBTREE
+                        } else {
+                            fileSystemTracker.registerFolder(path)
+                            FileVisitResult.CONTINUE
+                        }
+                    }
+
+                })
+            } catch (e: IOException) {
+                logger.warn("Indexing of folder $folderPath failed ", e)
+            }
         }
     }
 
