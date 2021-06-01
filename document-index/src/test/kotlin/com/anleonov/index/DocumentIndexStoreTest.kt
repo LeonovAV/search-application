@@ -157,7 +157,7 @@ class DocumentIndexStoreTest {
         removingThread.join()
 
         for (i in 1..1000) {
-            assertTrue(indexStore.getDocumentIds("a$i")!!.isEmpty())
+            assertTrue(indexStore.getDocumentIds("a$i").isEmpty())
         }
     }
 

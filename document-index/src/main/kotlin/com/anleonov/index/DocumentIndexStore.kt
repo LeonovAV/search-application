@@ -4,7 +4,8 @@ import com.anleonov.index.api.DocumentIndex
 import com.anleonov.index.api.DocumentIndexTrackChangesListener
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 class DocumentIndexStore : DocumentIndex {
 
@@ -12,24 +13,27 @@ class DocumentIndexStore : DocumentIndex {
 
     private val listeners = CopyOnWriteArrayList<DocumentIndexTrackChangesListener>()
 
-    private val lock = ReentrantLock()
+    private val lock = ReentrantReadWriteLock()
+    private val readLock = lock.readLock()
+    private val writeLock = lock.writeLock()
 
     override fun add(token: String, documentId: Int) {
-        doWithLock {
+        doWithLock(writeLock) {
             tokenStore.getOrPut(token) { mutableSetOf() }.add(documentId)
-
-            // TODO think about concurrency here
-            listeners.forEach { it.onTrackedTokenAdd(token, documentId) }
         }
+        listeners.forEach { it.onTrackedTokenAdd(token, documentId) }
     }
 
     override fun remove(token: String, documentId: Int) {
-        doWithLock {
+        var isRemoved = false
+        doWithLock(writeLock) {
             if (tokenStore.containsKey(token)) {
                 tokenStore.getValue(token).remove(documentId)
-
-                listeners.forEach { it.onTrackedTokenRemove(token, documentId) }
+                isRemoved = true
             }
+        }
+        if (isRemoved) {
+            listeners.forEach { it.onTrackedTokenRemove(token, documentId) }
         }
     }
 
@@ -38,28 +42,37 @@ class DocumentIndexStore : DocumentIndex {
     }
 
     override fun getDocumentIds(token: String): Set<Int> {
-        return if (tokenStore.containsKey(token)) {
-            tokenStore.getValue(token).toSet()
-        } else emptySet()
+        var documentIds = emptySet<Int>()
+        doWithLock(readLock) {
+            if (tokenStore.containsKey(token)) {
+                documentIds = tokenStore.getValue(token).toSet()
+            }
+        }
+        return documentIds
     }
 
     override fun getDocumentIdsContains(tokenQuery: String): Set<Int> {
         val result = mutableSetOf<Int>()
-        tokenStore.forEach { (token: String, documentIds: MutableSet<Int>) ->
-            if (token.contains(tokenQuery)) {
-                // TODO think about concurrency problem
-                result.addAll(documentIds)
+        doWithLock(readLock) {
+            tokenStore.forEach { (token: String, documentIds: MutableSet<Int>) ->
+                if (token.contains(tokenQuery)) {
+                    result.addAll(documentIds)
+                }
             }
         }
         return result
     }
 
     override fun findTokensByDocumentId(documentId: Int): Set<String> {
-        return tokenStore.mapNotNullTo(HashSet()) { (token, documentIds) ->
-            if (documentId in documentIds) {
-                token
-            } else null
+        val tokens = mutableSetOf<String>()
+        doWithLock(readLock) {
+            tokenStore.forEach { (token, documentIds) ->
+                if (documentId in documentIds) {
+                    tokens.add(token)
+                }
+            }
         }
+        return tokens
     }
 
     override fun addListener(listener: DocumentIndexTrackChangesListener) {
@@ -74,7 +87,7 @@ class DocumentIndexStore : DocumentIndex {
         tokenStore.clear()
     }
 
-    private fun doWithLock(block: () -> Unit) {
+    private fun doWithLock(lock: Lock, block: () -> Unit) {
         lock.lock()
         try {
             block.invoke()
