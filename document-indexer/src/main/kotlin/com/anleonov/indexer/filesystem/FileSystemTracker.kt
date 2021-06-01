@@ -20,6 +20,8 @@ class FileSystemTracker(
     private val listeners = CopyOnWriteArrayList<FileSystemEventListener>()
 
     init {
+        logger.info("Initialize file system notification task")
+
         val task = FileSystemEventNotificationTask(fileSystemEntryRegistry)
         fileTrackerScheduledExecutorService.scheduleWithFixedDelay(task, 0, 2, TimeUnit.SECONDS)
 

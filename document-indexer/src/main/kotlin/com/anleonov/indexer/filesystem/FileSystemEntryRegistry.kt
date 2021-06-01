@@ -1,6 +1,7 @@
 package com.anleonov.indexer.filesystem
 
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.*
 import java.nio.file.WatchKey
@@ -21,15 +22,19 @@ class FileSystemEntryRegistry(
     fun registerFolder(folderPath: Path, shouldTrackFolder: Boolean = true): Boolean {
         logger.debug("Try to register $folderPath folder")
         var isRegistered = false
-        if (!registeredFolders.containsKey(folderPath)) {
-            val watchKey = folderPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
-            registeredFolders[folderPath] = watchKey
-            isRegistered = true
-        } else {
-            logger.debug("Folder $folderPath is already registered")
-        }
-        if (!trackedFolders.contains(folderPath) && shouldTrackFolder) {
-            trackedFolders.add(folderPath)
+        try {
+            if (!registeredFolders.containsKey(folderPath)) {
+                val watchKey = folderPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
+                registeredFolders[folderPath] = watchKey
+                isRegistered = true
+            } else {
+                logger.debug("Folder $folderPath is already registered")
+            }
+            if (!trackedFolders.contains(folderPath) && shouldTrackFolder) {
+                trackedFolders.add(folderPath)
+            }
+        } catch (e: IOException) {
+            logger.warn("Could not register folder", e)
         }
         return isRegistered
     }

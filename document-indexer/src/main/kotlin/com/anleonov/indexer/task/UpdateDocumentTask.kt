@@ -8,6 +8,7 @@ import com.anleonov.indexer.model.IndexingEvent
 import com.anleonov.indexer.model.RemoveTokenIndexingEvent
 import com.anleonov.indexer.model.UpdateTokenIndexingEvent
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.BlockingQueue
 
@@ -28,38 +29,42 @@ class UpdateDocumentTask(
         val documentTokens = documentIndex.findTokensByDocumentId(documentId).toMutableSet()
         val documentTokensToUpdate = mutableSetOf<String>()
 
-        Files.lines(document.path).use { lines ->
-            lines.forEach { line ->
-                tokenizer.tokenize(line).forEach { token ->
-                    val tokenContent = token.content
-                    if (tokenContent in documentTokens) {
-                        documentTokens.remove(tokenContent)
-                        documentTokensToUpdate.add(tokenContent)
-                    } else {
-                        try {
-                            indexingEventsQueue.put(AddTokenIndexingEvent(documentId, tokenContent))
-                        } catch (ex: InterruptedException) {
-                            logger.warn("Put add token event to queue finished with exception", ex)
+        try {
+            Files.lines(document.path).use { lines ->
+                lines.forEach { line ->
+                    tokenizer.tokenize(line).forEach { token ->
+                        val tokenContent = token.content
+                        if (tokenContent in documentTokens) {
+                            documentTokens.remove(tokenContent)
+                            documentTokensToUpdate.add(tokenContent)
+                        } else {
+                            try {
+                                indexingEventsQueue.put(AddTokenIndexingEvent(documentId, tokenContent))
+                            } catch (ex: InterruptedException) {
+                                logger.warn("Put add token event to queue finished with exception", ex)
+                            }
                         }
-                    }
 
-                    documentTokensToUpdate.forEach {
-                        try {
-                            indexingEventsQueue.put(UpdateTokenIndexingEvent(documentId, it))
-                        } catch (ex: InterruptedException) {
-                            logger.warn("Put update token event to queue finished with exception", ex)
+                        documentTokensToUpdate.forEach {
+                            try {
+                                indexingEventsQueue.put(UpdateTokenIndexingEvent(documentId, it))
+                            } catch (ex: InterruptedException) {
+                                logger.warn("Put update token event to queue finished with exception", ex)
+                            }
                         }
-                    }
 
-                    documentTokens.forEach {
-                        try {
-                            indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
-                        } catch (ex: InterruptedException) {
-                            logger.warn("Put delete token event to queue finished with exception", ex)
+                        documentTokens.forEach {
+                            try {
+                                indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
+                            } catch (ex: InterruptedException) {
+                                logger.warn("Put delete token event to queue finished with exception", ex)
+                            }
                         }
                     }
                 }
             }
+        } catch (e: IOException) {
+            logger.warn("Update index for file ${document.path} finished with exception", e)
         }
 
         val end = System.currentTimeMillis()
