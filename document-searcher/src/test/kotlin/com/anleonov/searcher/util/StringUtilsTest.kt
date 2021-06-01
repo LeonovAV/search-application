@@ -1,6 +1,5 @@
-package com.anleonov.searcher
+package com.anleonov.searcher.util
 
-import com.anleonov.searcher.util.allIndicesOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
