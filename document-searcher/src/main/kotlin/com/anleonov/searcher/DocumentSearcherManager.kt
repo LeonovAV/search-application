@@ -9,6 +9,10 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Class is responsible for performing full-text search in document index and returns search results
+ * as a flow in order to keep them up to date.
+ */
 class DocumentSearcherManager(
     private val tokenizer: Tokenizer,
     private val documentIndex: DocumentIndex,

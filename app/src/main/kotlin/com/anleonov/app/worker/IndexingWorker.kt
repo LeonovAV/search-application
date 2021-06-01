@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory
 import javax.swing.*
 
 /**
- *
+ * Class is responsible for background indexing of the selected folder. It extends
+ * SwingWorker in order not to block main UI thread. Also it listens to the indexing
+ * process to show the progress or cancel indexing.
  */
 class IndexingWorker(
     private val progressBarIndexingPanel: JPanel,

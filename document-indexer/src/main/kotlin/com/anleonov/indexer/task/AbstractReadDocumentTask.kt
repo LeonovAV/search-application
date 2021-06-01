@@ -11,7 +11,8 @@ import java.nio.file.Files
 import java.util.concurrent.BlockingQueue
 
 /**
- *
+ * Class is responsible for document indexing and registering file in the filesystem
+ * tracker. Task is used for concurrent indexing.
  */
 abstract class AbstractReadDocumentTask(
     private val document: Document,

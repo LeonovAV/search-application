@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- *
+ * Class is responsible for indexing folders or files. It also handles events coming from
+ * file system tracker. Each action starts a separate task to handle actions independently
+ * and to speed up indexing process.
  */
 class DocumentIndexerManager(
     private val tokenizer: Tokenizer,

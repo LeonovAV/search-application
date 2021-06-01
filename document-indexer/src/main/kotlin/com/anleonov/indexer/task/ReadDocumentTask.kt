@@ -7,7 +7,7 @@ import com.anleonov.indexer.model.IndexingEvent
 import java.util.concurrent.BlockingQueue
 
 /**
- *
+ * See [com.anleonov.indexer.task.AbstractReadDocumentTask].
  */
 class ReadDocumentTask(
     document: Document,

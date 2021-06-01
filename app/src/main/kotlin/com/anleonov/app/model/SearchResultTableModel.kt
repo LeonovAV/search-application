@@ -3,7 +3,7 @@ package com.anleonov.app.model
 import javax.swing.table.AbstractTableModel
 
 /**
- *
+ * Class represents search result table model - contains and manages search result data.
  */
 class SearchResultTableModel : AbstractTableModel() {
 
@@ -81,7 +81,8 @@ class SearchResultTableModel : AbstractTableModel() {
 }
 
 /**
- *
+ * Describe search result row, which contains absolute file path, row number starting with 0,
+ * and matched positions.
  */
 data class SearchResultRow(
     val filePath: String,

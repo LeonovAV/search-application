@@ -2,6 +2,7 @@ package com.anleonov.searcher.util
 
 /**
  * Calculates [EditSet] between collection B (before) and collection A (after).
+ *
  * @param B collection B type
  * @param A collection A type
  * @param K generic identity for B and A types

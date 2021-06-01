@@ -12,6 +12,11 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import javax.swing.SwingWorker
 
+/**
+ * Class is responsible for background searching based on query. It extends
+ * SwingWorker in order not to block main UI thread. Also it uses a coroutine
+ * to keep search results up to date with file system changes.
+ */
 class SearchWorker(
     private val searchQuery: String,
     private val documentSearcher: DocumentSearcher,

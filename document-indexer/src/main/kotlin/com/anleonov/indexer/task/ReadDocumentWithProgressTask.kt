@@ -8,7 +8,8 @@ import com.anleonov.indexer.model.IndexingEvent
 import java.util.concurrent.BlockingQueue
 
 /**
- *
+ * Class allows one to notify listeners about current progress
+ * (see [com.anleonov.indexer.task.AbstractReadDocumentTask])
  */
 class ReadDocumentWithProgressTask(
     document: Document,
