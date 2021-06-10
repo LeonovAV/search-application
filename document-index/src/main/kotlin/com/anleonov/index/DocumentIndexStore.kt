@@ -4,8 +4,9 @@ import com.anleonov.index.api.DocumentIndex
 import com.anleonov.index.api.DocumentIndexTrackChangesListener
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 class DocumentIndexStore : DocumentIndex {
 
@@ -14,11 +15,9 @@ class DocumentIndexStore : DocumentIndex {
     private val listeners = CopyOnWriteArrayList<DocumentIndexTrackChangesListener>()
 
     private val lock = ReentrantReadWriteLock()
-    private val readLock = lock.readLock()
-    private val writeLock = lock.writeLock()
 
     override fun add(token: String, documentId: Int) {
-        doWithLock(writeLock) {
+        lock.write {
             tokenStore.getOrPut(token) { mutableSetOf() }.add(documentId)
         }
         listeners.forEach { it.onTrackedTokenAdd(token, documentId) }
@@ -26,7 +25,7 @@ class DocumentIndexStore : DocumentIndex {
 
     override fun remove(token: String, documentId: Int) {
         var isRemoved = false
-        doWithLock(writeLock) {
+        lock.write {
             if (tokenStore.containsKey(token)) {
                 tokenStore.getValue(token).remove(documentId)
                 isRemoved = true
@@ -43,7 +42,7 @@ class DocumentIndexStore : DocumentIndex {
 
     override fun getDocumentIds(token: String): Set<Int> {
         var documentIds = emptySet<Int>()
-        doWithLock(readLock) {
+        lock.read {
             if (tokenStore.containsKey(token)) {
                 documentIds = tokenStore.getValue(token).toSet()
             }
@@ -53,7 +52,7 @@ class DocumentIndexStore : DocumentIndex {
 
     override fun getDocumentIdsContains(tokenQuery: String): Set<Int> {
         val result = mutableSetOf<Int>()
-        doWithLock(readLock) {
+        lock.read {
             tokenStore.forEach { (token: String, documentIds: MutableSet<Int>) ->
                 if (token.contains(tokenQuery)) {
                     result.addAll(documentIds)
@@ -65,7 +64,7 @@ class DocumentIndexStore : DocumentIndex {
 
     override fun findTokensByDocumentId(documentId: Int): Set<String> {
         val tokens = mutableSetOf<String>()
-        doWithLock(readLock) {
+        lock.read {
             tokenStore.forEach { (token, documentIds) ->
                 if (documentId in documentIds) {
                     tokens.add(token)
@@ -85,15 +84,6 @@ class DocumentIndexStore : DocumentIndex {
 
     override fun clear() {
         tokenStore.clear()
-    }
-
-    private fun doWithLock(lock: Lock, block: () -> Unit) {
-        lock.lock()
-        try {
-            block.invoke()
-        } finally {
-            lock.unlock()
-        }
     }
 
 }
