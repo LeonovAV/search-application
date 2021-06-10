@@ -44,23 +44,23 @@ class UpdateDocumentTask(
                                 logger.warn(ex) { "Put add token event to queue finished with exception" }
                             }
                         }
-
-                        documentTokensToUpdate.forEach {
-                            try {
-                                indexingEventsQueue.put(UpdateTokenIndexingEvent(documentId, it))
-                            } catch (ex: InterruptedException) {
-                                logger.warn(ex) { "Put update token event to queue finished with exception" }
-                            }
-                        }
-
-                        documentTokens.forEach {
-                            try {
-                                indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
-                            } catch (ex: InterruptedException) {
-                                logger.warn(ex) { "Put delete token event to queue finished with exception" }
-                            }
-                        }
                     }
+                }
+            }
+
+            documentTokensToUpdate.forEach {
+                try {
+                    indexingEventsQueue.put(UpdateTokenIndexingEvent(documentId, it))
+                } catch (ex: InterruptedException) {
+                    logger.warn(ex) { "Put update token event to queue finished with exception" }
+                }
+            }
+
+            documentTokens.forEach {
+                try {
+                    indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
+                } catch (ex: InterruptedException) {
+                    logger.warn(ex) { "Put delete token event to queue finished with exception" }
                 }
             }
         } catch (e: IOException) {
