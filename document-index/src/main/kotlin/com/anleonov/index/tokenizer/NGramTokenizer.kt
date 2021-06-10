@@ -13,7 +13,7 @@ class NGramTokenizer(
     override fun tokenize(content: String): List<Token> {
         if (content.isEmpty()) return emptyList()
 
-        if (content.length <= nGramSize) return listOf(Token(content))
+        if (content.length <= nGramSize) return listOf(Token(content.toLowerCase()))
 
         val tokens = mutableListOf<Token>()
         for (i in 0..content.length - nGramSize) {

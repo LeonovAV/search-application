@@ -54,4 +54,14 @@ class NGramTokenizerTest {
         assertEquals(expectedTokens, tokens)
     }
 
+    @Test
+    fun `should tokenize one trigram in lowercase`() {
+        val tokens = triGramTokenizer.tokenize("Yes")
+
+        val expectedTokens = listOf(
+            Token("yes")
+        )
+        assertEquals(expectedTokens, tokens)
+    }
+
 }
