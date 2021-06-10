@@ -90,6 +90,15 @@ class DocumentIndexStoreTest {
     }
 
     @Test
+    fun `should return document ids contains token query`() {
+        indexStore.add("abc1", DOCUMENT_1)
+        indexStore.add("spb1", DOCUMENT_2)
+        indexStore.add("cde1", DOCUMENT_3)
+
+        assertEquals(setOf(DOCUMENT_1, DOCUMENT_3), indexStore.getDocumentIdsContains("c"))
+    }
+
+    @Test
     fun `should add the same token for different documents concurrently`() {
         val token = "m1"
 
