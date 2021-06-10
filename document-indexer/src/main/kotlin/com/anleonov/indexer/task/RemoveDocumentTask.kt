@@ -6,8 +6,10 @@ import com.anleonov.index.api.DocumentStore
 import com.anleonov.indexer.filesystem.FileSystemTracker
 import com.anleonov.indexer.model.IndexingEvent
 import com.anleonov.indexer.model.RemoveTokenIndexingEvent
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.util.concurrent.BlockingQueue
+
+private val logger = KotlinLogging.logger {}
 
 class RemoveDocumentTask(
     private val document: Document,
@@ -16,8 +18,6 @@ class RemoveDocumentTask(
     private val fileSystemTracker: FileSystemTracker,
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
 ) : Runnable {
-
-    private val logger = LoggerFactory.getLogger(RemoveDocumentTask::class.java)
 
     override fun run() {
         val start = System.currentTimeMillis()
@@ -29,7 +29,7 @@ class RemoveDocumentTask(
             try {
                 indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
             } catch (ex: InterruptedException) {
-                logger.warn("Error during put event to indexing queue", ex)
+                logger.warn(ex) { "Error during put event to indexing queue" }
             }
         }
 
@@ -38,7 +38,7 @@ class RemoveDocumentTask(
         fileSystemTracker.unregisterFile(documentPath)
 
         val end = System.currentTimeMillis()
-        logger.debug("Remove file ${document.path} from index took ${end - start} ms")
+        logger.debug { "Remove file ${document.path} from index took ${end - start} ms" }
     }
 
 }

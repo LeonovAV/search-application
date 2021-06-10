@@ -1,6 +1,6 @@
 package com.anleonov.indexer.filesystem
 
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.io.IOException
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.*
@@ -8,11 +8,11 @@ import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.util.concurrent.ConcurrentHashMap
 
+private val logger = KotlinLogging.logger {}
+
 class FileSystemEntryRegistry(
     private val watchService: WatchService
 ) {
-
-    private val logger = LoggerFactory.getLogger(FileSystemEntryRegistry::class.java)
 
     private val registeredFolders = ConcurrentHashMap<Path, WatchKey>()
 
@@ -20,7 +20,7 @@ class FileSystemEntryRegistry(
     private val trackedFiles = ConcurrentHashMap.newKeySet<Path>()
 
     fun registerFolder(folderPath: Path, shouldTrackFolder: Boolean = true): Boolean {
-        logger.debug("Try to register $folderPath folder")
+        logger.debug { "Try to register $folderPath folder" }
         var isRegistered = false
         try {
             if (!registeredFolders.containsKey(folderPath)) {
@@ -28,28 +28,28 @@ class FileSystemEntryRegistry(
                 registeredFolders[folderPath] = watchKey
                 isRegistered = true
             } else {
-                logger.debug("Folder $folderPath is already registered")
+                logger.debug { "Folder $folderPath is already registered" }
             }
             if (!trackedFolders.contains(folderPath) && shouldTrackFolder) {
                 trackedFolders.add(folderPath)
             }
         } catch (e: IOException) {
-            logger.warn("Could not register folder", e)
+            logger.warn(e) { "Could not register folder" }
         }
         return isRegistered
     }
 
     fun registerFile(filePath: Path): Boolean {
-        logger.debug("Try to register $filePath file")
+        logger.debug { "Try to register $filePath file" }
         val isAdded = trackedFiles.add(filePath)
         if (!isAdded) {
-            logger.debug("File $filePath is already registered")
+            logger.debug { "File $filePath is already registered" }
         }
         return isAdded
     }
 
     fun unregisterFolder(folderPath: Path): Boolean {
-        logger.debug("Unregister folder $folderPath with sub-directories")
+        logger.debug { "Unregister folder $folderPath with sub-directories" }
         val foldersToRemove = trackedFolders.filter { it.startsWith(folderPath) }
         var isRemoved = false
         foldersToRemove.forEach {

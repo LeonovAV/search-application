@@ -15,7 +15,7 @@ import com.anleonov.indexer.model.IndexingEvent
 import com.anleonov.indexer.task.*
 import com.anleonov.indexer.util.DocumentIdGenerator
 import com.anleonov.indexer.util.supportedFileExtensions
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -24,6 +24,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class is responsible for indexing folders or files. It also handles events coming from
@@ -36,8 +38,6 @@ class DocumentIndexerManager(
     private val documentStore: DocumentStore,
     private val fileSystemTracker: FileSystemTracker
 ) : DocumentIndexer, FileSystemEventListener {
-
-    private val logger = LoggerFactory.getLogger(DocumentIndexerManager::class.java)
 
     private val listeners = CopyOnWriteArrayList<DocumentIndexerListener>()
 
@@ -90,7 +90,7 @@ class DocumentIndexerManager(
                     }
 
                     override fun preVisitDirectory(path: Path, basicFileAttributes: BasicFileAttributes): FileVisitResult {
-                        logger.debug("Pre visit directory $path")
+                        logger.debug { "Pre visit directory $path" }
                         return if (Files.isHidden(path)) {
                             FileVisitResult.SKIP_SUBTREE
                         } else {
@@ -101,17 +101,17 @@ class DocumentIndexerManager(
 
                     private fun getFileVisitResult(): FileVisitResult {
                         return if (isCurrentIndexingCancelled) {
-                            logger.debug("Terminate indexing due to cancelling")
+                            logger.debug { "Terminate indexing due to cancelling" }
                             FileVisitResult.TERMINATE
                         } else FileVisitResult.CONTINUE
                     }
 
                 })
             } catch (e: IOException) {
-                logger.warn("Indexing failed", e)
+                logger.warn(e) { "Indexing failed" }
             }
         } else {
-            logger.warn("No read access to folder $normalizedPath")
+            logger.warn { "No read access to folder $normalizedPath" }
             listeners.forEach { it.onIndexingFinished() }
         }
     }
@@ -146,7 +146,7 @@ class DocumentIndexerManager(
     }
 
     override fun onFolderChanged(folderPath: Path, type: FileSystemEventType) {
-        logger.debug("Handle event type $type for folder: $folderPath")
+        logger.debug { "Handle event type $type for folder: $folderPath" }
         when (type) {
             CREATED -> {
                 indexCreatedFolder(folderPath)
@@ -160,13 +160,13 @@ class DocumentIndexerManager(
                 }
             }
             MODIFIED -> {
-                logger.debug("Processing of folder modified event is skipped")
+                logger.debug { "Processing of folder modified event is skipped" }
             }
         }
     }
 
     override fun onFileChanged(filePath: Path, type: FileSystemEventType) {
-        logger.debug("Handle event type $type for file $filePath")
+        logger.debug { "Handle event type $type for file $filePath" }
         when (type) {
             CREATED -> {
                 indexFile(filePath)
@@ -186,7 +186,7 @@ class DocumentIndexerManager(
 
     private fun indexCreatedFolder(folderPath: Path) {
         if (hasAccess(folderPath)) {
-            logger.debug("Index new created folder $folderPath")
+            logger.debug { "Index new created folder $folderPath" }
 
             try {
                 Files.walkFileTree(folderPath, object : SimpleFileVisitor<Path>() {
@@ -207,7 +207,7 @@ class DocumentIndexerManager(
 
                 })
             } catch (e: IOException) {
-                logger.warn("Indexing of folder $folderPath failed ", e)
+                logger.warn(e) { "Indexing of folder $folderPath failed" }
             }
         }
     }
@@ -232,7 +232,7 @@ class DocumentIndexerManager(
 
     private fun indexFile(filePath: Path) {
         if (hasAccess(filePath) && isFileAvailable(filePath) && !isFileIndexed(filePath)) {
-            logger.debug("Index new created file $filePath")
+            logger.debug { "Index new created file $filePath" }
             val document = Document(DocumentIdGenerator.generate(), filePath, filePath.parent)
             val task = ReadDocumentTask(
                 document,
@@ -246,7 +246,7 @@ class DocumentIndexerManager(
     }
 
     private fun removeDocumentFromIndex(document: Document) {
-        logger.debug("Remove file ${document.path} from index")
+        logger.debug { "Remove file ${document.path} from index" }
         val task = RemoveDocumentTask(
             document,
             documentIndex,
@@ -259,7 +259,7 @@ class DocumentIndexerManager(
 
     private fun reindexFile(filePath: Path) {
         if (hasAccess(filePath) && isFileAvailable(filePath)) {
-            logger.debug("Re-index file $filePath due to modification")
+            logger.debug { "Re-index file $filePath due to modification" }
 
             documentStore.getDocumentByPath(filePath)?.let {
                 val task = UpdateDocumentTask(it, tokenizer, documentIndex, indexingEventsQueue)

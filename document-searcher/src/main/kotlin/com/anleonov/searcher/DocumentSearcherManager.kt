@@ -5,9 +5,11 @@ import com.anleonov.index.api.CommonNGramSize.triGram
 import com.anleonov.searcher.api.*
 import com.anleonov.searcher.util.*
 import kotlinx.coroutines.flow.MutableSharedFlow
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class is responsible for performing full-text search in document index and returns search results
@@ -18,8 +20,6 @@ class DocumentSearcherManager(
     private val documentIndex: DocumentIndex,
     private val documentStore: DocumentStore
 ) : DocumentSearcher, DocumentIndexTrackChangesListener {
-
-    private val logger = LoggerFactory.getLogger(DocumentSearcherManager::class.java)
 
     private val numberOfResults = 100
 
@@ -37,7 +37,7 @@ class DocumentSearcherManager(
     }
 
     override fun search(query: String): MutableSharedFlow<SearchResult> {
-        logger.debug("Search query $query")
+        logger.debug { "Search query $query" }
 
         if (this::currentSharedFlow.isInitialized) {
             currentSharedFlow.tryEmit(CompleteSearchResult())
@@ -93,7 +93,7 @@ class DocumentSearcherManager(
 
         val documentCandidates = documentStore.findDocumentsByIds(documentIdsCandidates)
 
-        logger.debug("Document candidates are: ${documentCandidates.map { it.path }}")
+        logger.debug { "Document candidates are: ${documentCandidates.map { it.path }}" }
 
         matchedDocuments = documentCandidates
             .asSequence()
@@ -103,7 +103,7 @@ class DocumentSearcherManager(
             .toMutableList()
 
         matchedDocuments.forEach {
-            logger.debug("Found matches: $it")
+            logger.debug { "Found matches: $it" }
             it.toAddSearchResult().forEach { currentSharedFlow.tryEmit(it) }
         }
 

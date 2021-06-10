@@ -3,17 +3,17 @@ package com.anleonov.indexer.filesystem
 import com.anleonov.indexer.executor.ExecutorsProvider
 import com.anleonov.indexer.model.FileSystemEventType
 import com.anleonov.indexer.model.FileSystemEventType.*
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
+private val logger = KotlinLogging.logger {}
+
 class FileSystemTracker(
     private val fileSystemEntryRegistry: FileSystemEntryRegistry
 ) : FileSystemEventListener {
-
-    private val logger = LoggerFactory.getLogger(FileSystemTracker::class.java)
 
     private val fileTrackerScheduledExecutorService = ExecutorsProvider.scheduledExecutorService
 

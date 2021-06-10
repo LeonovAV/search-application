@@ -1,14 +1,14 @@
 package com.anleonov.index
 
+import mu.KotlinLogging
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 
-class DocumentIndexStoreTest {
+private val logger = KotlinLogging.logger {}
 
-    private val logger = LoggerFactory.getLogger(DocumentIndexStoreTest::class.java)
+class DocumentIndexStoreTest {
 
     private val indexStore = DocumentIndexStore()
 

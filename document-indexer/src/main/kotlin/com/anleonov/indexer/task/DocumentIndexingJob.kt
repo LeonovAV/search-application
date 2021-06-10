@@ -4,8 +4,10 @@ import com.anleonov.index.api.DocumentIndex
 import com.anleonov.index.api.Tokenizer
 import com.anleonov.indexer.api.DocumentIndexerListener
 import com.anleonov.indexer.model.*
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.util.concurrent.BlockingQueue
+
+private val logger = KotlinLogging.logger {}
 
 class DocumentIndexingJob(
     private val tokenizer: Tokenizer,
@@ -14,22 +16,20 @@ class DocumentIndexingJob(
     private val listeners: List<DocumentIndexerListener>
 ) : Runnable {
 
-    private val logger = LoggerFactory.getLogger(DocumentIndexingJob::class.java)
-
     private val numberOfElementsFromQueue = 10_000
 
     override fun run() {
         val indexingEvents = mutableListOf<IndexingEvent>()
         val transferredElements = indexingEventsQueue.drainTo(indexingEvents, numberOfElementsFromQueue)
-        logger.trace("Number of transferred elements - $transferredElements")
+        logger.trace { "Number of transferred elements - $transferredElements" }
 
         if (indexingEvents.isEmpty()) {
-            logger.trace("Indexing finished")
+            logger.trace { "Indexing finished" }
             listeners.forEach { it.onIndexingFinished() }
         }
 
         indexingEvents.forEach {
-            logger.debug("$it")
+            logger.debug { "$it" }
             val affectedDocumentId = it.documentId
             when (it) {
                 is AddLineIndexingEvent -> {

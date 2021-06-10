@@ -6,17 +6,17 @@ import com.anleonov.app.worker.IndexingWorker
 import com.anleonov.app.worker.SearchWorker
 import com.anleonov.indexer.api.DocumentIndexer
 import com.anleonov.searcher.api.DocumentSearcher
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.*
+
+private val logger = KotlinLogging.logger {}
 
 class SearchApplicationFrame(
     private val documentIndexer: DocumentIndexer,
     private val documentSearcher: DocumentSearcher
 ) : JFrame() {
-
-    private val logger = LoggerFactory.getLogger(SearchApplicationFrame::class.java)
 
     // UI components for application menu
     private lateinit var indexFolderMenuItem: JMenuItem

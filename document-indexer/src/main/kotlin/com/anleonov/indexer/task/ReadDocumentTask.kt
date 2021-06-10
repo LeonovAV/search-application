@@ -5,10 +5,12 @@ import com.anleonov.index.api.DocumentStore
 import com.anleonov.indexer.filesystem.FileSystemTracker
 import com.anleonov.indexer.model.AddLineIndexingEvent
 import com.anleonov.indexer.model.IndexingEvent
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.BlockingQueue
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class is responsible for document indexing and registering file in the filesystem
@@ -22,8 +24,6 @@ open class ReadDocumentTask(
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
 ) : Runnable {
 
-    private val logger = LoggerFactory.getLogger(ReadDocumentTask::class.java)
-
     override fun run() {
         readDocument()
     }
@@ -32,7 +32,7 @@ open class ReadDocumentTask(
         val start = System.currentTimeMillis()
         val documentId = document.id
         val documentPath = document.path
-        logger.debug("Read file $documentPath for indexing")
+        logger.debug { "Read file $documentPath for indexing" }
 
         fileSystemTracker.registerFile(documentPath)
 
@@ -44,15 +44,15 @@ open class ReadDocumentTask(
                     try {
                         indexingEventsQueue.put(AddLineIndexingEvent(documentId, line))
                     } catch (ex: InterruptedException) {
-                        logger.warn("Put line of file: $documentPath to queue interrupted", ex)
+                        logger.warn(ex) { "Put line of file: $documentPath to queue interrupted" }
                     }
                 }
             }
         } catch (ex: IOException) {
-            logger.warn("Reading file: $documentPath finished with exception", ex)
+            logger.warn(ex) { "Reading file: $documentPath finished with exception" }
         }
         val end = System.currentTimeMillis()
-        logger.debug("File $documentPath reading and submitting took: ${end - start} ms")
+        logger.debug { "File $documentPath reading and submitting took: ${end - start} ms" }
     }
 
 }

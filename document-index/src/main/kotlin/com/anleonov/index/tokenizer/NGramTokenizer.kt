@@ -2,13 +2,13 @@ package com.anleonov.index.tokenizer
 
 import com.anleonov.index.api.Token
 import com.anleonov.index.api.Tokenizer
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
 
 class NGramTokenizer(
     private val nGramSize: Int
 ) : Tokenizer {
-
-    private val logger = LoggerFactory.getLogger(NGramTokenizer::class.java)
 
     override fun tokenize(content: String): List<Token> {
         if (content.isEmpty()) return emptyList()
@@ -21,7 +21,7 @@ class NGramTokenizer(
             tokens.add(Token(tokenContent))
         }
 
-        logger.trace("Extracted tokens: $tokens")
+        logger.trace { "Extracted tokens: $tokens" }
 
         return tokens
     }

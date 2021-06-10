@@ -2,8 +2,10 @@ package com.anleonov.app.worker
 
 import com.anleonov.indexer.api.DocumentIndexer
 import com.anleonov.indexer.api.DocumentIndexerListener
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import javax.swing.*
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class is responsible for background indexing of the selected folder. It extends
@@ -18,8 +20,6 @@ class IndexingWorker(
     private val folderPath: String,
     private val documentIndexer: DocumentIndexer
 ) : SwingWorker<Any?, Int>(), DocumentIndexerListener {
-
-    private val logger = LoggerFactory.getLogger(IndexingWorker::class.java)
 
     override fun doInBackground(): Any? {
         logger.info("Start background indexing job")

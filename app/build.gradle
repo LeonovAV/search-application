@@ -23,7 +23,9 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVersion"
+
     implementation "ch.qos.logback:logback-classic:$logbackVersion"
+    implementation "io.github.microutils:kotlin-logging-jvm:$kotlinLoggingVersion"
 
     testImplementation "junit:junit:$junitVersion"
 }

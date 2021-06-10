@@ -7,10 +7,12 @@ import com.anleonov.indexer.model.AddTokenIndexingEvent
 import com.anleonov.indexer.model.IndexingEvent
 import com.anleonov.indexer.model.RemoveTokenIndexingEvent
 import com.anleonov.indexer.model.UpdateTokenIndexingEvent
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.BlockingQueue
+
+private val logger = KotlinLogging.logger {}
 
 class UpdateDocumentTask(
     private val document: Document,
@@ -18,8 +20,6 @@ class UpdateDocumentTask(
     private val documentIndex: DocumentIndex,
     private val indexingEventsQueue: BlockingQueue<IndexingEvent>
 ) : Runnable {
-
-    private val logger = LoggerFactory.getLogger(UpdateDocumentTask::class.java)
 
     override fun run() {
         val start = System.currentTimeMillis()
@@ -41,7 +41,7 @@ class UpdateDocumentTask(
                             try {
                                 indexingEventsQueue.put(AddTokenIndexingEvent(documentId, tokenContent))
                             } catch (ex: InterruptedException) {
-                                logger.warn("Put add token event to queue finished with exception", ex)
+                                logger.warn(ex) { "Put add token event to queue finished with exception" }
                             }
                         }
 
@@ -49,7 +49,7 @@ class UpdateDocumentTask(
                             try {
                                 indexingEventsQueue.put(UpdateTokenIndexingEvent(documentId, it))
                             } catch (ex: InterruptedException) {
-                                logger.warn("Put update token event to queue finished with exception", ex)
+                                logger.warn(ex) { "Put update token event to queue finished with exception" }
                             }
                         }
 
@@ -57,18 +57,18 @@ class UpdateDocumentTask(
                             try {
                                 indexingEventsQueue.put(RemoveTokenIndexingEvent(documentId, it))
                             } catch (ex: InterruptedException) {
-                                logger.warn("Put delete token event to queue finished with exception", ex)
+                                logger.warn(ex) { "Put delete token event to queue finished with exception" }
                             }
                         }
                     }
                 }
             }
         } catch (e: IOException) {
-            logger.warn("Update index for file ${document.path} finished with exception", e)
+            logger.warn(e) { "Update index for file ${document.path} finished with exception" }
         }
 
         val end = System.currentTimeMillis()
-        logger.debug("Update index for file ${document.path} took ${end - start} ms")
+        logger.debug { "Update index for file ${document.path} took ${end - start} ms" }
     }
 
 }

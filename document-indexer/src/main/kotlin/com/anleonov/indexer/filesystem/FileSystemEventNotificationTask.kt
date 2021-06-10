@@ -2,17 +2,17 @@ package com.anleonov.indexer.filesystem
 
 import com.anleonov.indexer.model.FileSystemEventType
 import com.anleonov.indexer.model.FileSystemEventType.*
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.*
 import java.util.concurrent.CopyOnWriteArrayList
 
+private val logger = KotlinLogging.logger {}
+
 class FileSystemEventNotificationTask(
     private val fileSystemEntryRegistry: FileSystemEntryRegistry
 ) : Runnable {
-
-    private val logger = LoggerFactory.getLogger(FileSystemEventNotificationTask::class.java)
 
     private val listeners = CopyOnWriteArrayList<FileSystemEventListener>()
 
@@ -26,7 +26,7 @@ class FileSystemEventNotificationTask(
                         val path = pathByKey.resolve(event.context() as Path)
                         val eventKind = event.kind()
 
-                        logger.debug("Get event with type $eventKind for $path")
+                        logger.debug { "Get event with type $eventKind for $path" }
 
                         when (eventKind) {
                             ENTRY_DELETE -> {
@@ -44,7 +44,7 @@ class FileSystemEventNotificationTask(
                 }
             }
         } catch (e: InterruptedException) {
-            logger.warn("Could not get events from watch service", e)
+            logger.warn(e) { "Could not get events from watch service" }
         }
     }
 

@@ -6,11 +6,12 @@ import com.anleonov.searcher.api.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import javax.swing.SwingWorker
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class is responsible for background searching based on query. It extends
@@ -22,8 +23,6 @@ class SearchWorker(
     private val documentSearcher: DocumentSearcher,
     private val searchResultTable: JSearchResultTable
 ) : SwingWorker<MutableSharedFlow<SearchResult>, Any>() {
-
-    private val logger = LoggerFactory.getLogger(SearchWorker::class.java)
 
     override fun doInBackground(): MutableSharedFlow<SearchResult> {
         return documentSearcher.search(searchQuery)
@@ -66,7 +65,7 @@ class SearchWorker(
                             }
                         }
                     }
-                    .catch { logger.error("An exception occurred during processing search result", it) }
+                    .catch { logger.error(it) { "An exception occurred during processing search result" } }
                     .collect()
             }
         } catch (ex: Exception) {
