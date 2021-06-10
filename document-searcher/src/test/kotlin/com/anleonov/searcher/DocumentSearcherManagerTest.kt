@@ -97,7 +97,10 @@ class DocumentSearcherManagerTest {
                 .onEach { result.add(it) }
                 .collect()
         }
-        assertEquals(expectedResult.sortedBy { it.filePath }, result.sortedBy { it.filePath })
+        assertEquals(
+            expectedResult.filterIsInstance<AddSearchResult>().sortedBy { it.filePath },
+            result.filterIsInstance<AddSearchResult>().sortedBy { it.filePath }
+        )
     }
 
     @Test
@@ -120,7 +123,10 @@ class DocumentSearcherManagerTest {
                 .onEach { result.add(it) }
                 .collect()
         }
-        assertEquals(expectedResult.sortedBy { it.filePath }, result.sortedBy { it.filePath })
+        assertEquals(
+            expectedResult.filterIsInstance<AddSearchResult>().sortedBy { it.filePath },
+            result.filterIsInstance<AddSearchResult>().sortedBy { it.filePath }
+        )
     }
 
     @Test
@@ -142,7 +148,10 @@ class DocumentSearcherManagerTest {
                 .onEach { result.add(it) }
                 .collect()
         }
-        assertEquals(expectedResult.sortedBy { it.filePath }, result.sortedBy { it.filePath })
+        assertEquals(
+            expectedResult.filterIsInstance<AddSearchResult>().sortedBy { it.filePath },
+            result.filterIsInstance<AddSearchResult>().sortedBy { it.filePath }
+        )
     }
 
     @Test
@@ -165,7 +174,10 @@ class DocumentSearcherManagerTest {
                 .onEach { result.add(it) }
                 .collect()
         }
-        assertEquals(expectedResult.sortedBy { it.filePath }, result.sortedBy { it.filePath })
+        assertEquals(
+            expectedResult.filterIsInstance<AddSearchResult>().sortedBy { it.filePath },
+            result.filterIsInstance<AddSearchResult>().sortedBy { it.filePath }
+        )
     }
 
     @Test
@@ -187,7 +199,10 @@ class DocumentSearcherManagerTest {
                 .onEach { result.add(it) }
                 .collect()
         }
-        assertEquals(expectedResult.sortedBy { it.filePath }, result.sortedBy { it.filePath })
+        assertEquals(
+            expectedResult.filterIsInstance<AddSearchResult>().sortedBy { it.filePath },
+            result.filterIsInstance<AddSearchResult>().sortedBy { it.filePath }
+        )
     }
 
     private fun generateExpectedResults(searchQuery: String, documentFilePaths: List<Path>): List<SearchResult> {

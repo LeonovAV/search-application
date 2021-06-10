@@ -1,54 +1,25 @@
 package com.anleonov.searcher.api
 
-sealed class SearchResult(
+sealed class SearchResult
+
+data class AddSearchResult(
     val filePath: String,
     val lineNumber: Int,
     val positions: List<Int>
-) {
+) : SearchResult()
 
-    override fun toString(): String {
-        return "SearchResult(filePath='$filePath', lineNumber=$lineNumber, positions=$positions)"
-    }
+data class RemoveSearchResult(
+    val filePath: String,
+    val lineNumber: Int
+) : SearchResult()
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is SearchResult) return false
-
-        if (filePath != other.filePath) return false
-        if (lineNumber != other.lineNumber) return false
-        if (positions != other.positions) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = filePath.hashCode()
-        result = 31 * result + lineNumber
-        result = 31 * result + positions.hashCode()
-        return result
-    }
-
-}
-
-class AddSearchResult(
-    filePath: String,
-    lineNumber: Int,
-    positions: List<Int>
-) : SearchResult(filePath, lineNumber, positions)
-
-class RemoveSearchResult(
-    filePath: String,
-    lineNumber: Int,
-    positions: List<Int>
-) : SearchResult(filePath, lineNumber, positions)
-
-class UpdateSearchResult(
-    filePath: String,
-    lineNumber: Int,
-    positions: List<Int>
-) : SearchResult(filePath, lineNumber, positions)
+data class UpdateSearchResult(
+    val filePath: String,
+    val lineNumber: Int,
+    val positions: List<Int>
+) : SearchResult()
 
 /**
  * Special value indicates that current search process is complete
  */
-class CompleteSearchResult : SearchResult("", -1, emptyList())
+class CompleteSearchResult : SearchResult()

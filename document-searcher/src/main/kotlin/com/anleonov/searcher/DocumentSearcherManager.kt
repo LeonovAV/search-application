@@ -146,14 +146,17 @@ class DocumentSearcherManager(
     private fun Document.toMatchedDocument(queryLc: String): MatchedDocument? {
         var linesCounter = 0
         val matchedLines = mutableMapOf<Int, List<Int>>()
-        Files.lines(this.path).use { lines ->
-            lines.forEach { line ->
-                val matchedPositions = line.allIndicesOf(queryLc)
+        // File could be deleted at all - do not read it from file system
+        if (Files.exists(this.path)) {
+            Files.lines(this.path).use { lines ->
+                lines.forEach { line ->
+                    val matchedPositions = line.allIndicesOf(queryLc)
 
-                if (matchedPositions.isNotEmpty()) {
-                    matchedLines[linesCounter] = matchedPositions
+                    if (matchedPositions.isNotEmpty()) {
+                        matchedLines[linesCounter] = matchedPositions
+                    }
+                    linesCounter++
                 }
-                linesCounter++
             }
         }
 
@@ -220,8 +223,7 @@ class DocumentSearcherManager(
                         currentSharedFlow.tryEmit(
                             RemoveSearchResult(
                                 filePath = filePathAsString,
-                                lineNumber = operation.oldObject,
-                                positions = oldMatchedLines.getValue(operation.oldObject)
+                                lineNumber = operation.oldObject
                             )
                         )
                     }
@@ -235,12 +237,11 @@ class DocumentSearcherManager(
             // After changes document is not relevant for search query
             matchedDocuments.remove(matchedDocument)
 
-            matchedDocument.matchedLines.forEach { (lineNumber, positions) ->
+            matchedDocument.matchedLines.forEach { (lineNumber, _) ->
                 currentSharedFlow.tryEmit(
                     RemoveSearchResult(
                         filePath = filePathAsString,
-                        lineNumber = lineNumber,
-                        positions = positions
+                        lineNumber = lineNumber
                     )
                 )
             }

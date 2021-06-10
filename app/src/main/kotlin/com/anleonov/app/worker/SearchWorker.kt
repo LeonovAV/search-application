@@ -78,7 +78,7 @@ class SearchWorker(
         }
     }
 
-    private fun SearchResult.toViewModel(): SearchResultRow {
+    private fun AddSearchResult.toViewModel(): SearchResultRow {
         return SearchResultRow(this.filePath, this.lineNumber, this.positions)
     }
 
