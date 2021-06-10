@@ -9,7 +9,7 @@ import java.util.concurrent.BlockingQueue
 
 /**
  * Class allows one to notify listeners about current progress
- * (see [com.anleonov.indexer.task.AbstractReadDocumentTask])
+ * (see [com.anleonov.indexer.task.ReadDocumentTask])
  */
 class ReadDocumentWithProgressTask(
     document: Document,
@@ -19,10 +19,10 @@ class ReadDocumentWithProgressTask(
     fileSystemTracker: FileSystemTracker,
     indexingEventsQueue: BlockingQueue<IndexingEvent>,
     private val listeners: List<DocumentIndexerListener>
-) : AbstractReadDocumentTask(document, documentStore, fileSystemTracker, indexingEventsQueue), Runnable {
+) : ReadDocumentTask(document, documentStore, fileSystemTracker, indexingEventsQueue) {
 
     override fun run() {
-        super.readDocument()
+        super.run()
 
         listeners.forEach { it.onIndexingInProgress((documentNumber / percentage).toInt()) }
     }
